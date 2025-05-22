@@ -33,6 +33,8 @@ def fetch_standings():
     headers = {'X-Auth-Token': FOOTBALL_API_KEY}
     r = requests.get(url, headers=headers)
     data = r.json()
+    if 'standings' not in data or not data['standings']:
+        return pd.DataFrame([{"ทีม": "⚠️ ไม่พบข้อมูล", "แต้ม": "-"}])
     table = data['standings'][0]['table']
     return pd.DataFrame([{
         'อันดับ': t['position'],
