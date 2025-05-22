@@ -12,24 +12,7 @@ st.title("⚽ Premier League Match Predictor")
 FOOTBALL_API_KEY = st.secrets["FOOTBALL_API_KEY"]
 ODDS_API_KEY = st.secrets["ODDS_API_KEY"]
 
-# -------------------- ข้อมูลผลแข่ง1 ----------------------
-@st.cache_data(ttl=3600)
-def fetch_fixtures():
-    url = "https://api.football-data.org/v4/competitions/PL/matches?status=SCHEDULED"
-    headers = {'X-Auth-Token': FOOTBALL_API_KEY}
-    try:
-        r = requests.get(url, headers=headers)
-        if r.status_code != 200:
-            st.warning(f"⚠️ ไม่สามารถโหลดข้อมูลการแข่งขัน (HTTP {r.status_code})")
-            return []
-        data = r.json()
-        matches = data.get("matches", [])
-        return matches
-    except Exception as e:
-        st.error(f"❌ เกิดข้อผิดพลาดในการโหลดข้อมูล: {e}")
-        return []
-
-# -------------------- ข้อมูลผลแข่ง2 ----------------------
+# -------------------- ข้อมูลผลแข่ง ----------------------
 @st.cache_data(ttl=3600)
 def fetch_matches():
     url = 'https://api.football-data.org/v4/competitions/PL/matches?season=2024'
@@ -37,11 +20,21 @@ def fetch_matches():
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
         return []
-    data = response.json()['matches']
+    data = response.json().get('matches', [])
     played = [m for m in data if m['score']['fullTime']['home'] is not None]
     return played
 
-matches = fetch_matches()
+@st.cache_data(ttl=3600)
+def fetch_fixtures():
+    url = "https://api.football-data.org/v4/competitions/PL/matches?status=SCHEDULED"
+    headers = {'X-Auth-Token': FOOTBALL_API_KEY}
+    try:
+        r = requests.get(url, headers=headers)
+        if r.status_code != 200:
+            return []
+        return r.json().get("matches", [])
+    except:
+        return []
 
 # -------------------- ตารางคะแนน ----------------------
 @st.cache_data(ttl=3600)
@@ -65,14 +58,14 @@ def fetch_standings():
         'แต้ม': t['points']
     } for t in table])
 
-# -------------------- ราคาต่อรอง ----------------------
+# -------------------- ราคาต่อรอง Handicap ----------------------
 @st.cache_data(ttl=3600)
 def fetch_odds():
     url = "https://api.the-odds-api.com/v4/sports/soccer_epl/odds"
     params = {
         'apiKey': ODDS_API_KEY,
         'regions': 'eu',
-        'markets': 'h2h',
+        'markets': 'spreads',  # Handicap
         'oddsFormat': 'decimal'
     }
     r = requests.get(url, params=params)
@@ -83,7 +76,9 @@ def fetch_odds():
 # -------------------- ส่วน UI ----------------------
 tab1, tab2, tab3 = st.tabs(["🔮 คาดการณ์", "📊 ตารางคะแนน", "💸 ราคาต่อรอง"])
 
+# 🔮 คาดการณ์ผล
 with tab1:
+    matches = fetch_matches()
     if not matches:
         st.error("ไม่สามารถโหลดข้อมูลการแข่งขันได้")
     else:
@@ -114,40 +109,46 @@ with tab1:
             pred = model.predict([[test_diff]])[0]
             label = {1: "🏠 เจ้าบ้านชนะ", 0: "⚖ เสมอ", -1: "🛫 ทีมเยือนชนะ"}[pred]
             st.success(f"ผลคาดการณ์: {label}")
-            matches = fetch_fixtures()
-    if not matches:
-        st.warning("❌ ไม่สามารถโหลดข้อมูลการแข่งขันได้")
-    else:
-        for m in matches[:10]:
-            utc_time = datetime.strptime(m['utcDate'], "%Y-%m-%dT%H:%M:%SZ")
-            local_time = utc_time + timedelta(hours=7)
-            st.markdown(f"**{m['homeTeam']['name']} vs {m['awayTeam']['name']}**")
-            st.write("🕓", local_time.strftime("%d/%m/%Y %H:%M"))
-            st.divider()
 
+        fixtures = fetch_fixtures()
+        if not fixtures:
+            st.warning("❌ ไม่สามารถโหลดข้อมูลการแข่งขันได้")
+        else:
+            st.subheader("📅 นัดที่กำลังจะมาถึง")
+            for m in fixtures[:5]:
+                utc_time = datetime.strptime(m['utcDate'], "%Y-%m-%dT%H:%M:%SZ")
+                local_time = utc_time + timedelta(hours=7)
+                st.markdown(f"**{m['homeTeam']['name']} vs {m['awayTeam']['name']}**")
+                st.write("🕓", local_time.strftime("%d/%m/%Y %H:%M"))
+                st.divider()
+
+# 📊 ตารางคะแนน
 with tab2:
     st.subheader("📊 ตารางคะแนนพรีเมียร์ลีก")
     standings_df = fetch_standings()
     st.dataframe(standings_df, use_container_width=True)
 
+# 💸 ราคาต่อรอง Handicap
 with tab3:
-    st.subheader("💸 ราคาต่อรองล่าสุด")
+    st.subheader("💸 ราคาต่อรอง Handicap (Asian)")
     odds = fetch_odds()
     if not odds:
         st.warning("ไม่สามารถโหลดราคาต่อรองจาก API ได้")
     else:
         for match in odds[:10]:
-            teams = match.get('teams') or [match.get("home_team"), match.get("away_team")]
-            if not teams or len(teams) < 2:
+            home = match.get("home_team")
+            away = match.get("away_team")
+            bookies = match.get("bookmakers", [])
+            if not bookies:
                 continue
-            site = match.get('bookmakers', [])
-            if not site:
-                continue
-            markets = site[0].get('markets', [])
+            markets = bookies[0].get("markets", [])
             if not markets:
                 continue
-            outcomes = markets[0].get('outcomes', [])
-            st.markdown(f"**{teams[0]} vs {teams[1]}**")
+            outcomes = markets[0].get("outcomes", [])
+            st.markdown(f"**{home} vs {away}**")
             for o in outcomes:
-                st.write(f"➡ {o['name']}: {o['price']}")
+                name = o.get("name", "-")
+                point = o.get("point", "-")
+                price = o.get("price", "-")
+                st.write(f"{name} ({point}): {price}")
             st.divider()
