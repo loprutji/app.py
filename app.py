@@ -114,16 +114,7 @@ with tab1:
             pred = model.predict([[test_diff]])[0]
             label = {1: "🏠 เจ้าบ้านชนะ", 0: "⚖ เสมอ", -1: "🛫 ทีมเยือนชนะ"}[pred]
             st.success(f"ผลคาดการณ์: {label}")
-matches = fetch_fixtures()
-if not matches:
-    st.warning("❌ ไม่สามารถโหลดข้อมูลการแข่งขันได้")
-else:
-    for m in matches[:10]:
-        utc_time = datetime.strptime(m['utcDate'], "%Y-%m-%dT%H:%M:%SZ")
-        local_time = utc_time + timedelta(hours=7)
-        st.markdown(f"**{m['homeTeam']['name']} vs {m['awayTeam']['name']}**")
-        st.write("🕓", local_time.strftime("%d/%m/%Y %H:%M"))
-        st.divider()
+
 with tab2:
     st.subheader("📊 ตารางคะแนนพรีเมียร์ลีก")
     standings_df = fetch_standings()
