@@ -110,10 +110,17 @@ with tab3:
         st.warning("ไม่สามารถโหลดราคาต่อรองจาก API ได้")
     else:
         for match in odds[:10]:
-            teams = match['teams']
-            site = match['bookmakers'][0]
-            odds_data = site['markets'][0]['outcomes']
+            teams = match.get('teams')
+            if not teams:
+                continue
+            site = match.get('bookmakers', [])
+            if not site:
+                continue
+            markets = site[0].get('markets', [])
+            if not markets:
+                continue
+            outcomes = markets[0].get('outcomes', [])
             st.markdown(f"**{teams[0]} vs {teams[1]}**")
-            for o in odds_data:
+            for o in outcomes:
                 st.write(f"➡ {o['name']}: {o['price']}")
             st.divider()
