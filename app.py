@@ -8,7 +8,8 @@ st.set_page_config(page_title="Premier League Predictor", page_icon="⚽")
 
 st.title("⚽ Premier League Match Predictor")
 
-API_KEY = st.secrets["edc3f951e2e347e3ae3b1e7757eb6834"]
+# ดึง API Key อย่างถูกต้อง
+API_KEY = st.secrets["FOOTBALL_API_KEY"]
 headers = {'X-Auth-Token': API_KEY}
 url = 'https://api.football-data.org/v4/competitions/PL/matches?season=2024'
 
