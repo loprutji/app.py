@@ -1,8 +1,8 @@
-
 import streamlit as st
 import pandas as pd
 import requests
 from sklearn.linear_model import LogisticRegression
+from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Premier League Predictor", page_icon="⚽")
 
@@ -28,6 +28,7 @@ def fetch_fixtures():
     except Exception as e:
         st.error(f"❌ เกิดข้อผิดพลาดในการโหลดข้อมูล: {e}")
         return []
+
 # -------------------- ข้อมูลผลแข่ง2 ----------------------
 @st.cache_data(ttl=3600)
 def fetch_matches():
@@ -82,7 +83,6 @@ def fetch_odds():
 # -------------------- ส่วน UI ----------------------
 tab1, tab2, tab3 = st.tabs(["🔮 คาดการณ์", "📊 ตารางคะแนน", "💸 ราคาต่อรอง"])
 
-
 with tab1:
     if not matches:
         st.error("ไม่สามารถโหลดข้อมูลการแข่งขันได้")
@@ -115,16 +115,15 @@ with tab1:
             label = {1: "🏠 เจ้าบ้านชนะ", 0: "⚖ เสมอ", -1: "🛫 ทีมเยือนชนะ"}[pred]
             st.success(f"ผลคาดการณ์: {label}")
             matches = fetch_fixtures()
-if not matches:
-    st.warning("❌ ไม่สามารถโหลดข้อมูลการแข่งขันได้")
-else:
-    for m in matches[:10]:
-        utc_time = datetime.strptime(m['utcDate'], "%Y-%m-%dT%H:%M:%SZ")
-        local_time = utc_time + timedelta(hours=7)
-        st.markdown(f"**{m['homeTeam']['name']} vs {m['awayTeam']['name']}**")
-        st.write("🕓", local_time.strftime("%d/%m/%Y %H:%M"))
-        st.divider()
-
+    if not matches:
+        st.warning("❌ ไม่สามารถโหลดข้อมูลการแข่งขันได้")
+    else:
+        for m in matches[:10]:
+            utc_time = datetime.strptime(m['utcDate'], "%Y-%m-%dT%H:%M:%SZ")
+            local_time = utc_time + timedelta(hours=7)
+            st.markdown(f"**{m['homeTeam']['name']} vs {m['awayTeam']['name']}**")
+            st.write("🕓", local_time.strftime("%d/%m/%Y %H:%M"))
+            st.divider()
 
 with tab2:
     st.subheader("📊 ตารางคะแนนพรีเมียร์ลีก")
@@ -138,8 +137,8 @@ with tab3:
         st.warning("ไม่สามารถโหลดราคาต่อรองจาก API ได้")
     else:
         for match in odds[:10]:
-            teams = match.get('teams')
-            if not teams:
+            teams = match.get('teams') or [match.get("home_team"), match.get("away_team")]
+            if not teams or len(teams) < 2:
                 continue
             site = match.get('bookmakers', [])
             if not site:
