@@ -15,7 +15,7 @@ ODDS_API_KEY = st.secrets["ODDS_API_KEY"]
 # -------------------- ข้อมูลผลแข่ง1 ----------------------
 @st.cache_data(ttl=3600)
 def fetch_fixtures():
-    url = "https://api.football-data.org/v4/competitions/BL1/matches?status=SCHEDULED"
+    url = "https://api.football-data.org/v4/competitions/PL/matches?status=SCHEDULED"
     headers = {'X-Auth-Token': FOOTBALL_API_KEY}
     try:
         r = requests.get(url, headers=headers)
@@ -31,7 +31,7 @@ def fetch_fixtures():
 # -------------------- ข้อมูลผลแข่ง2 ----------------------
 @st.cache_data(ttl=3600)
 def fetch_matches():
-    url = 'https://api.football-data.org/v4/competitions/BL1/matches?season=2024'
+    url = 'https://api.football-data.org/v4/competitions/PL/matches?season=2024'
     headers = {'X-Auth-Token': FOOTBALL_API_KEY}
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
@@ -45,7 +45,7 @@ matches = fetch_matches()
 # -------------------- ตารางคะแนน ----------------------
 @st.cache_data(ttl=3600)
 def fetch_standings():
-    url = "https://api.football-data.org/v4/competitions/BL1/standings"
+    url = "https://api.football-data.org/v4/competitions/PL/standings"
     headers = {'X-Auth-Token': FOOTBALL_API_KEY}
     r = requests.get(url, headers=headers)
     data = r.json()
