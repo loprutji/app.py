@@ -15,7 +15,7 @@ ODDS_API_KEY = st.secrets["ODDS_API_KEY"]
 # -------------------- ข้อมูลผลแข่ง1 ----------------------
 @st.cache_data(ttl=3600)
 def fetch_fixtures():
-    url = "https://api.football-data.org/v4/competitions/PL/matches?status=SCHEDULED"
+    url = "https://api.football-data.org/v4/competitions/BL1/matches?status=SCHEDULED"
     headers = {'X-Auth-Token': FOOTBALL_API_KEY}
     try:
         r = requests.get(url, headers=headers)
