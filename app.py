@@ -59,19 +59,21 @@ def fetch_standings():
     } for t in table])
 
 # -------------------- ราคาต่อรอง Handicap ----------------------
+# -------------------- ราคาต่อรอง Asian Handicap ----------------------
 @st.cache_data(ttl=3600)
 def fetch_odds():
     url = "https://api.the-odds-api.com/v4/sports/soccer_epl/odds"
     params = {
         'apiKey': ODDS_API_KEY,
         'regions': 'eu',
-        'markets': 'spreads',  # Handicap
+        'markets': 'spreads',  # ใช้ spreads แทน h2h สำหรับ Asian Handicap
         'oddsFormat': 'decimal'
     }
     r = requests.get(url, params=params)
     if r.status_code != 200:
         return []
     return r.json()
+
 
 # -------------------- ส่วน UI ----------------------
 tab1, tab2, tab3 = st.tabs(["🔮 คาดการณ์", "📊 ตารางคะแนน", "💸 ราคาต่อรอง"])
@@ -130,25 +132,25 @@ with tab2:
 
 # 💸 ราคาต่อรอง Handicap
 with tab3:
-    st.subheader("💸 ราคาต่อรอง Handicap (Asian)")
+    st.subheader("💸 ราคาต่อรอง Asian Handicap")
     odds = fetch_odds()
     if not odds:
         st.warning("ไม่สามารถโหลดราคาต่อรองจาก API ได้")
     else:
         for match in odds[:10]:
-            home = match.get("home_team")
-            away = match.get("away_team")
-            bookies = match.get("bookmakers", [])
-            if not bookies:
+            teams = match.get('teams')
+            bookmakers = match.get('bookmakers', [])
+            if not teams or not bookmakers:
                 continue
-            markets = bookies[0].get("markets", [])
-            if not markets:
-                continue
-            outcomes = markets[0].get("outcomes", [])
-            st.markdown(f"**{home} vs {away}**")
-            for o in outcomes:
-                name = o.get("name", "-")
-                point = o.get("point", "-")
-                price = o.get("price", "-")
-                st.write(f"{name} ({point}): {price}")
+
+            st.markdown(f"**{teams[0]} vs {teams[1]}**")
+
+            for bookmaker in bookmakers[:1]:  # เอาเจ้ามือรายแรกก็พอ
+                for market in bookmaker.get('markets', []):
+                    if market['key'] == 'spreads':
+                        for outcome in market.get('outcomes', []):
+                            name = outcome.get('name')  # เช่น "Manchester United"
+                            point = outcome.get('point')  # เช่น -1.5
+                            price = outcome.get('price')  # เช่น 1.85
+                            st.write(f"➡ {name} ({point:+}): อัตราจ่าย {price}")
             st.divider()
